@@ -1,23 +1,29 @@
 const express = require('express');
-const mongoose = require('mongoose');
-
+const dotenv = require('dotenv');
+const cors = require('cors');
+const { Pool } = require('pg');
+dotenv.config();
 const app = express();
-const port = process.env.PORT || 3000;
-
-// Middleware to parse JSON requests
+app.use(cors());
 app.use(express.json());
-
-// Database connection
-const dbURI = 'your_database_uri_here'; // Replace with your actual database URI
-mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('Database connected successfully'))
-  .catch(err => console.error('Database connection error:', err));
-
-// Sample route
-app.get('/', (req, res) => {
-  res.send('Hello World!');
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+pool.connect((err) => {
+  if (err) {
+    console.error('Database connection error:', err);
+  } else {
+    console.log('✓ Connected to PostgreSQL');
+  }
 });
-
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+app.use('/api/lectures', require('./routes/lectures'));
+app.use('/api/videos', require('./routes/videos'));
+app.use('/api/quizzes', require('./routes/quizzes'));
+app.use('/api/ai', require('./routes/ai'));
+app.get('/health', (req, res) => {
+  res.json({ status: 'Server is running' });
 });
+const PORT = process.env.SERVER_PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
+module.exports = { pool, app };
